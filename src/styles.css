@@ -185,6 +185,46 @@ h1 {
   text-align: right;
 }
 
+/* Hover interval section */
+.hover-interval-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+#hover-interval-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 180px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+#hover-interval-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2563eb;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+}
+
+#hover-interval-value {
+  font-size: 0.8rem;
+  color: #6b7280;
+  min-width: 44px;
+  text-align: right;
+}
+
 /* Start/Stop button */
 .start-btn {
   width: 180px;
@@ -283,7 +323,8 @@ h1 {
     color: #ffffff;
   }
 
-  #volume-slider {
+  #volume-slider,
+  #hover-interval-slider {
     background: #4b5563;
   }
 

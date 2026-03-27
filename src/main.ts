@@ -1,6 +1,7 @@
 import { Metronome } from "./metronome";
 
 const metronome = new Metronome();
+let hoverIntervalMs = 300;
 
 function updateBpmDisplay(): void {
   const el = document.getElementById("bpm-value");
@@ -44,7 +45,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     btn.addEventListener("mouseenter", () => {
       applyDelta();
-      intervalId = setInterval(applyDelta, 300);
+      intervalId = setInterval(applyDelta, hoverIntervalMs);
     });
 
     btn.addEventListener("mouseleave", () => {
@@ -64,6 +65,14 @@ window.addEventListener("DOMContentLoaded", () => {
       metronome.setBeatsPerMeasure(beats);
       updateBeatIndicators();
     });
+  });
+
+  // Hover interval slider
+  const hoverIntervalSlider = document.getElementById("hover-interval-slider") as HTMLInputElement;
+  const hoverIntervalValue = document.getElementById("hover-interval-value");
+  hoverIntervalSlider.addEventListener("input", () => {
+    hoverIntervalMs = parseInt(hoverIntervalSlider.value, 10);
+    if (hoverIntervalValue) hoverIntervalValue.textContent = `${hoverIntervalMs}ms`;
   });
 
   // Volume slider
