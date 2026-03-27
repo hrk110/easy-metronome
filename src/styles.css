@@ -119,18 +119,21 @@ h1 {
 
 .timesig-buttons {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
 }
 
 .sig-btn {
-  width: 44px;
-  height: 44px;
-  font-size: 1rem;
+  min-width: 44px;
+  height: 36px;
+  padding: 0 8px;
+  font-size: 0.8rem;
   font-weight: 600;
   font-family: inherit;
   background: #f3f4f6;
   border: 2px solid #e5e7eb;
-  border-radius: 50%;
+  border-radius: 8px;
   color: #374151;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;

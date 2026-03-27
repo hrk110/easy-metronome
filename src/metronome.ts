@@ -10,6 +10,7 @@ export class Metronome {
 
   private bpm: number = 120;
   private beatsPerMeasure: number = 4;
+  private accentEnabled: boolean = true;
   private currentBeat: number = 0;
   private nextNoteTime: number = 0;
   private timerID: ReturnType<typeof setTimeout> | null = null;
@@ -38,7 +39,7 @@ export class Metronome {
     envelope.connect(gain);
 
     // Accent on beat 0 (first beat of measure)
-    osc.frequency.value = beat === 0 ? 1000 : 440;
+    osc.frequency.value = (beat === 0 && this.accentEnabled) ? 1000 : 440;
 
     envelope.gain.setValueAtTime(1.0, time);
     envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
@@ -98,6 +99,10 @@ export class Metronome {
   setBeatsPerMeasure(beats: number): void {
     this.beatsPerMeasure = beats;
     this.currentBeat = 0;
+  }
+
+  setAccentEnabled(enabled: boolean): void {
+    this.accentEnabled = enabled;
   }
 
   getBeatsPerMeasure(): number {

@@ -62,7 +62,9 @@ window.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".sig-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const beats = parseInt(btn.dataset.beats ?? "4", 10);
+      const accent = btn.dataset.accent !== "false";
       metronome.setBeatsPerMeasure(beats);
+      metronome.setAccentEnabled(accent);
       updateBeatIndicators();
     });
   });
