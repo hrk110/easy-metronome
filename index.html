@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Easy Metronome</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <main class="container">
+      <h1>Easy Metronome</h1>
+
+      <!-- BPM control -->
+      <section class="bpm-section">
+        <div class="bpm-controls">
+          <button class="bpm-btn" data-delta="-5">−5</button>
+          <button class="bpm-btn" data-delta="-1">−1</button>
+          <div class="bpm-display">
+            <span id="bpm-value">120</span>
+            <span class="bpm-label">BPM</span>
+          </div>
+          <button class="bpm-btn" data-delta="1">+1</button>
+          <button class="bpm-btn" data-delta="5">+5</button>
+        </div>
+      </section>
+
+      <!-- Time signature -->
+      <section class="timesig-section">
+        <span class="section-label">拍子</span>
+        <div class="timesig-buttons">
+          <button class="sig-btn" data-beats="2">2</button>
+          <button class="sig-btn" data-beats="3">3</button>
+          <button class="sig-btn active" data-beats="4">4</button>
+          <button class="sig-btn" data-beats="6">6</button>
+        </div>
+      </section>
+
+      <!-- Volume -->
+      <section class="volume-section">
+        <span class="section-label">音量</span>
+        <input type="range" id="volume-slider" min="0" max="100" value="80" />
+        <span id="volume-value">80%</span>
+      </section>
+
+      <!-- Start/Stop -->
+      <button id="start-stop" class="start-btn">▶ スタート</button>
+
+      <!-- Beat indicators -->
+      <div id="beat-indicators" class="beat-indicators"></div>
+    </main>
+  </body>
+</html>
