@@ -106,11 +106,12 @@ h1 {
 
 /* Time signature section */
 .timesig-section {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
   justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
 }
 
 .section-label {
@@ -120,11 +121,19 @@ h1 {
   min-width: 28px;
 }
 
+.timesig-section .section-label {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .timesig-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   justify-content: center;
+  width: 100%;
 }
 
 .sig-btn {
