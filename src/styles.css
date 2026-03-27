@@ -174,7 +174,9 @@ h1 {
 #volume-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 180px;
+  flex: 1;
+  min-width: 100px;
+  max-width: 220px;
   height: 6px;
   background: #e5e7eb;
   border-radius: 3px;
@@ -214,7 +216,9 @@ h1 {
 #hover-interval-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 180px;
+  flex: 1;
+  min-width: 100px;
+  max-width: 220px;
   height: 6px;
   background: #e5e7eb;
   border-radius: 3px;
@@ -244,7 +248,7 @@ h1 {
 
 /* Start/Stop button */
 .start-btn {
-  width: 180px;
+  width: clamp(140px, 45%, 220px);
   height: 52px;
   font-size: 1.1rem;
   font-weight: 700;
