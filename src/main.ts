@@ -30,8 +30,31 @@ function highlightBeat(beat: number): void {
 
 metronome.onBeat = (beat) => highlightBeat(beat);
 
+function updateTimesigCols(): void {
+  const container = document.querySelector<HTMLElement>(".timesig-buttons");
+  if (!container) return;
+  const total = container.children.length;
+  const width = container.clientWidth;
+  const gap = 6;
+  const minBtnW = 44;
+  // Find the largest divisor of total that fits within the available width
+  const divisors: number[] = [];
+  for (let d = total; d >= 1; d--) {
+    if (total % d === 0) divisors.push(d);
+  }
+  const cols = divisors.find((n) => width >= n * minBtnW + (n - 1) * gap) ?? 1;
+  container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   updateBeatIndicators();
+
+  // Responsive time signature grid
+  updateTimesigCols();
+  const timesigButtons = document.querySelector<HTMLElement>(".timesig-buttons");
+  if (timesigButtons) {
+    new ResizeObserver(updateTimesigCols).observe(timesigButtons);
+  }
 
   // BPM hover buttons — change once on mouseenter, repeat on interval while hovered
   document.querySelectorAll<HTMLButtonElement>(".bpm-btn").forEach((btn) => {
