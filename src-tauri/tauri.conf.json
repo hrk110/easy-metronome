@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "easy-metronome",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "com.hrkito0902.easy-metronome",
   "build": {
     "beforeDevCommand": "npm run dev",
