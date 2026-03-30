@@ -117,17 +117,46 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Start/Stop button
   const startStopBtn = document.getElementById("start-stop") as HTMLButtonElement;
-  startStopBtn.addEventListener("click", () => {
+
+  const toggleStartStop = () => {
     if (metronome.isRunning()) {
       metronome.stop();
       startStopBtn.textContent = "▶ スタート";
       startStopBtn.classList.remove("running");
-      // Clear indicators
       document.querySelectorAll(".beat-dot").forEach((el) => el.classList.remove("active"));
     } else {
       metronome.start();
       startStopBtn.textContent = "■ ストップ";
       startStopBtn.classList.add("running");
+    }
+  };
+
+  startStopBtn.addEventListener("click", toggleStartStop);
+
+  // Keyboard shortcuts: Space = start/stop, hjkl = BPM (h:-5, j:-1, k:+1, l:+5)
+  document.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+    switch (e.key) {
+      case " ":
+        e.preventDefault();
+        toggleStartStop();
+        break;
+      case "h":
+        metronome.setBpm(metronome.getBpm() - 5);
+        updateBpmDisplay();
+        break;
+      case "j":
+        metronome.setBpm(metronome.getBpm() - 1);
+        updateBpmDisplay();
+        break;
+      case "k":
+        metronome.setBpm(metronome.getBpm() + 1);
+        updateBpmDisplay();
+        break;
+      case "l":
+        metronome.setBpm(metronome.getBpm() + 5);
+        updateBpmDisplay();
+        break;
     }
   });
 });
