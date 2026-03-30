@@ -1,7 +1,7 @@
 import { Metronome } from "./metronome";
 
 const metronome = new Metronome();
-let hoverIntervalMs = 300;
+let hoverIntervalMs = 500;
 
 function updateBpmDisplay(): void {
   const el = document.getElementById("bpm-value");
