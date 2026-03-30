@@ -86,8 +86,12 @@ window.addEventListener("DOMContentLoaded", () => {
       btn.classList.add("active");
       const beats = parseInt(btn.dataset.beats ?? "4", 10);
       const accent = btn.dataset.accent !== "false";
+      const beatMultiplier = parseFloat(btn.dataset.beatMultiplier ?? "1");
+      const secondaryAccent = parseInt(btn.dataset.secondaryAccent ?? "-1", 10);
       metronome.setBeatsPerMeasure(beats);
       metronome.setAccentEnabled(accent);
+      metronome.setBeatDurationMultiplier(beatMultiplier);
+      metronome.setSecondaryAccentBeat(secondaryAccent);
       updateBeatIndicators();
     });
   });

@@ -11,6 +11,8 @@ export class Metronome {
   private bpm: number = 120;
   private beatsPerMeasure: number = 4;
   private accentEnabled: boolean = true;
+  private beatDurationMultiplier: number = 1.0;
+  private secondaryAccentBeat: number = -1;
   private currentBeat: number = 0;
   private nextNoteTime: number = 0;
   private timerID: ReturnType<typeof setTimeout> | null = null;
@@ -38,8 +40,14 @@ export class Metronome {
     osc.connect(envelope);
     envelope.connect(gain);
 
-    // Accent on beat 0 (first beat of measure)
-    osc.frequency.value = (beat === 0 && this.accentEnabled) ? 1000 : 440;
+    // Accent on beat 0 (primary) or secondaryAccentBeat (compound meter)
+    if (beat === 0 && this.accentEnabled) {
+      osc.frequency.value = 1000;
+    } else if (beat === this.secondaryAccentBeat && this.accentEnabled) {
+      osc.frequency.value = 700;
+    } else {
+      osc.frequency.value = 440;
+    }
 
     envelope.gain.setValueAtTime(1.0, time);
     envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
@@ -60,7 +68,7 @@ export class Metronome {
       setTimeout(() => this.onBeat?.(beat), delay);
 
       // Advance to next beat
-      const secondsPerBeat = 60.0 / this.bpm;
+      const secondsPerBeat = (60.0 / this.bpm) * this.beatDurationMultiplier;
       this.nextNoteTime += secondsPerBeat;
       this.currentBeat = (this.currentBeat + 1) % this.beatsPerMeasure;
     }
@@ -103,6 +111,14 @@ export class Metronome {
 
   setAccentEnabled(enabled: boolean): void {
     this.accentEnabled = enabled;
+  }
+
+  setBeatDurationMultiplier(multiplier: number): void {
+    this.beatDurationMultiplier = multiplier;
+  }
+
+  setSecondaryAccentBeat(beat: number): void {
+    this.secondaryAccentBeat = beat;
   }
 
   getBeatsPerMeasure(): number {
