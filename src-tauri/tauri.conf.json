@@ -15,10 +15,9 @@
       {
         "title": "Easy Metronome",
         "width": 480,
-        "height": 420,
-        "resizable": true,
-        "minWidth": 380,
-        "minHeight": 460,
+        "height": 480,
+        "resizable": false,
+        "alwaysOnTop": false,
         "acceptFirstMouse": true
       }
     ],

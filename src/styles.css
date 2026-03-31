@@ -192,6 +192,31 @@ h1 {
   text-align: right;
 }
 
+/* Always on top section */
+.alwaysontop-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.alwaysontop-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+
+.alwaysontop-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
 /* Start/Stop button */
 .start-btn {
   width: clamp(140px, 45%, 220px);
@@ -297,5 +322,9 @@ h1 {
 
   .beat-dot {
     background: #374151;
+  }
+
+  .alwaysontop-label {
+    color: #9ca3af;
   }
 }

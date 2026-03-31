@@ -1,3 +1,4 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Metronome } from "./metronome";
 
 const metronome = new Metronome();
@@ -124,6 +125,12 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   startStopBtn.addEventListener("click", toggleStartStop);
+
+  // Always on top toggle
+  const alwaysOnTopCheckbox = document.getElementById("always-on-top") as HTMLInputElement;
+  alwaysOnTopCheckbox.addEventListener("change", () => {
+    getCurrentWindow().setAlwaysOnTop(alwaysOnTopCheckbox.checked);
+  });
 
   // Keyboard shortcuts: Space = start/stop, hjkl = BPM (h:-5, j:-1, k:+1, l:+5)
   document.addEventListener("keydown", (e) => {
