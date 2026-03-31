@@ -157,6 +157,14 @@ window.addEventListener("DOMContentLoaded", () => {
         metronome.setBpm(metronome.getBpm() + 5);
         updateBpmDisplay();
         break;
+      case "x":
+        metronome.setBpm(metronome.getBpm() * 2);
+        updateBpmDisplay();
+        break;
+      case "/":
+        metronome.setBpm(Math.round(metronome.getBpm() / 2));
+        updateBpmDisplay();
+        break;
     }
   });
 });
