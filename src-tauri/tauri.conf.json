@@ -14,7 +14,7 @@
     "windows": [
       {
         "title": "Easy Metronome",
-        "width": 480,
+        "width": 380,
         "height": 480,
         "resizable": false,
         "alwaysOnTop": false,
