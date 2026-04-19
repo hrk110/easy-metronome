@@ -3,6 +3,9 @@
 
 const SCHEDULE_AHEAD_TIME = 0.1; // seconds to schedule ahead
 const LOOKAHEAD_MS = 25;         // scheduler interval in ms
+const STUCK_LOG_INTERVAL_MS = 5000; // minimum ms between "waiting" log spam
+
+export type LogLevel = "info" | "warn" | "error";
 
 export class Metronome {
   private audioCtx: AudioContext | null = null;
@@ -16,18 +19,54 @@ export class Metronome {
   private currentBeat: number = 0;
   private nextNoteTime: number = 0;
   private timerID: ReturnType<typeof setTimeout> | null = null;
+  private lastStuckLogTime: number = 0;
 
   private _volume: number = 0.8;
   onBeat?: (beat: number) => void;
+  onLog?: (level: LogLevel, message: string) => void;
+
+  private log(level: LogLevel, message: string): void {
+    this.onLog?.(level, message);
+  }
+
+  private createContext(): AudioContext {
+    const ctx = new AudioContext();
+    this.gainNode = ctx.createGain();
+    this.gainNode.gain.value = this._volume;
+    this.gainNode.connect(ctx.destination);
+    this.log("info", `AudioContext created (sampleRate: ${ctx.sampleRate} Hz)`);
+    return ctx;
+  }
 
   private getAudioCtx(): AudioContext {
-    if (!this.audioCtx) {
-      this.audioCtx = new AudioContext();
-      this.gainNode = this.audioCtx.createGain();
-      this.gainNode.gain.value = this._volume;
-      this.gainNode.connect(this.audioCtx.destination);
+    if (!this.audioCtx || this.audioCtx.state === "closed") {
+      this.audioCtx = this.createContext();
     }
     return this.audioCtx;
+  }
+
+  // Recreate the AudioContext — call when the device changes.
+  recreateAudioCtx(): void {
+    const old = this.audioCtx;
+    this.audioCtx = null;
+    this.gainNode = null;
+    this.nextNoteTime = 0; // Scheduler will resync on next tick
+    if (old) {
+      old.close().catch(() => {});
+    }
+    this.log("info", "AudioContext discarded (will recreate on next tick)");
+  }
+
+  // Call inside a user-gesture callback (focus, click, visibilitychange).
+  // WebKit only allows resume() from a user-gesture context.
+  resumeIfSuspended(): void {
+    const ctx = this.audioCtx;
+    if (!ctx || ctx.state === "running") return;
+    this.log("info", `Attempting resume (state: ${ctx.state})`);
+    ctx
+      .resume()
+      .then(() => this.log("info", `AudioContext resumed → ${this.audioCtx?.state ?? "gone"}`))
+      .catch((e) => this.log("error", `resume() failed: ${e}`));
   }
 
   private scheduleNote(beat: number, time: number): void {
@@ -40,7 +79,6 @@ export class Metronome {
     osc.connect(envelope);
     envelope.connect(gain);
 
-    // Accent on beat 0 (primary) or secondaryAccentBeat (compound meter)
     if (beat === 0 && this.accentEnabled) {
       osc.frequency.value = 1000;
     } else if (beat === this.secondaryAccentBeat && this.accentEnabled) {
@@ -59,6 +97,34 @@ export class Metronome {
   private scheduler(): void {
     const ctx = this.getAudioCtx();
 
+    // Context closed externally (aggressive memory management, device removed, etc.)
+    if (ctx.state === "closed") {
+      this.log("warn", "AudioContext was closed — will recreate");
+      this.audioCtx = null;
+      this.gainNode = null;
+      this.nextNoteTime = 0;
+      this.timerID = setTimeout(() => this.scheduler(), LOOKAHEAD_MS);
+      return;
+    }
+
+    // Suspended or interrupted — cannot schedule; wait for resumeIfSuspended()
+    if (ctx.state !== "running") {
+      const now = Date.now();
+      if (now - this.lastStuckLogTime > STUCK_LOG_INTERVAL_MS) {
+        this.lastStuckLogTime = now;
+        this.log("warn", `AudioContext not running (state: ${ctx.state}) — waiting for user gesture to resume`);
+      }
+      this.timerID = setTimeout(() => this.scheduler(), LOOKAHEAD_MS);
+      return;
+    }
+
+    // Resync after a suspension: ctx.currentTime may have advanced while frozen,
+    // or may be behind nextNoteTime — clamp to avoid a burst of queued notes.
+    if (this.nextNoteTime < ctx.currentTime) {
+      this.log("info", `Resynced nextNoteTime (+${(ctx.currentTime - this.nextNoteTime).toFixed(3)} s drift)`);
+      this.nextNoteTime = ctx.currentTime + 0.05;
+    }
+
     while (this.nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD_TIME) {
       this.scheduleNote(this.currentBeat, this.nextNoteTime);
 
@@ -67,7 +133,6 @@ export class Metronome {
       const delay = Math.max(0, (noteTime - ctx.currentTime) * 1000);
       setTimeout(() => this.onBeat?.(beat), delay);
 
-      // Advance to next beat
       const secondsPerBeat = (60.0 / this.bpm) * this.beatDurationMultiplier;
       this.nextNoteTime += secondsPerBeat;
       this.currentBeat = (this.currentBeat + 1) % this.beatsPerMeasure;
@@ -86,6 +151,7 @@ export class Metronome {
 
     this.currentBeat = 0;
     this.nextNoteTime = ctx.currentTime + 0.05;
+    this.log("info", `Started at ${this.bpm} BPM`);
     this.scheduler();
   }
 
@@ -93,6 +159,7 @@ export class Metronome {
     if (this.timerID !== null) {
       clearTimeout(this.timerID);
       this.timerID = null;
+      this.log("info", "Stopped");
     }
   }
 

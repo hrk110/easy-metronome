@@ -47,6 +47,38 @@ function updateTimesigCols(): void {
   container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 }
 
+// ---------------------------------------------------------------------------
+// Log panel
+// ---------------------------------------------------------------------------
+const MAX_LOG_ENTRIES = 40;
+
+function addLogEntry(level: import("./metronome").LogLevel, message: string): void {
+  const list = document.getElementById("debug-log-list");
+  const summary = document.getElementById("debug-summary");
+  if (!list || !summary) return;
+
+  const now = new Date();
+  const ts = now.toTimeString().slice(0, 8);
+  const li = document.createElement("li");
+  li.className = `log-${level}`;
+  li.textContent = `[${ts}] ${message}`;
+  list.appendChild(li);
+
+  // Evict oldest entries
+  while (list.children.length > MAX_LOG_ENTRIES) {
+    list.removeChild(list.firstChild!);
+  }
+
+  // Auto-scroll
+  list.scrollTop = list.scrollHeight;
+
+  // Update summary badge with warn/error count
+  const badCount = list.querySelectorAll(".log-warn, .log-error").length;
+  summary.textContent = badCount > 0 ? `ログ (⚠ ${badCount})` : "ログ";
+}
+
+// ---------------------------------------------------------------------------
+
 window.addEventListener("DOMContentLoaded", () => {
   updateBeatIndicators();
 
@@ -125,6 +157,26 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   startStopBtn.addEventListener("click", toggleStartStop);
+
+  // Log callback
+  metronome.onLog = addLogEntry;
+
+  // Resume AudioContext on focus restore (screen unlock, app switch).
+  // WebKit only allows ctx.resume() from a user-gesture context;
+  // window focus qualifies.
+  const handleResume = () => metronome.resumeIfSuspended();
+  window.addEventListener("focus", handleResume);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) handleResume();
+  });
+
+  // Recreate AudioContext when the system audio device changes.
+  // The existing context becomes silently invalid after a device switch.
+  navigator.mediaDevices.addEventListener("devicechange", () => {
+    if (metronome.isRunning()) {
+      metronome.recreateAudioCtx();
+    }
+  });
 
   // Always on top toggle
   const alwaysOnTopCheckbox = document.getElementById("always-on-top") as HTMLInputElement;
