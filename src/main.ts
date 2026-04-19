@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { Metronome } from "./metronome";
 
 const metronome = new Metronome();
@@ -177,6 +177,21 @@ window.addEventListener("DOMContentLoaded", () => {
       metronome.recreateAudioCtx();
     }
   });
+
+  // Resize window to fit content when debug log is toggled open/closed
+  const debugSection = document.querySelector<HTMLDetailsElement>(".debug-section");
+  const container = document.querySelector<HTMLElement>(".container");
+  if (debugSection && container) {
+    debugSection.addEventListener("toggle", async () => {
+      // Wait one frame for the layout to settle after <details> open/close
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const bodyStyle = getComputedStyle(document.body);
+      const bodyPaddingV =
+        parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+      const newHeight = Math.ceil(container.offsetHeight + bodyPaddingV) + 16;
+      await getCurrentWindow().setSize(new LogicalSize(380, newHeight));
+    });
+  }
 
   // Always on top toggle
   const alwaysOnTopCheckbox = document.getElementById("always-on-top") as HTMLInputElement;
