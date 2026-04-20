@@ -45,20 +45,36 @@ export class Metronome {
     return this.audioCtx;
   }
 
-  // Recreate the AudioContext — call when the device changes.
+  // Must be called from a user-gesture handler (click).
+  // Creates a brand-new AudioContext and immediately calls resume() while still
+  // inside the gesture stack — the only reliable way in WebKit.
+  resetAudioContext(): void {
+    const old = this.audioCtx;
+    this.audioCtx = null;
+    this.gainNode = null;
+    this.nextNoteTime = 0;
+    if (old) old.close().catch(() => {});
+
+    // Both new AudioContext() and resume() must happen inside the click handler.
+    const ctx = this.getAudioCtx();
+    ctx
+      .resume()
+      .then(() => this.log("info", `AudioContext reset → ${ctx.state}`))
+      .catch((e) => this.log("error", `reset resume() failed: ${e}`));
+  }
+
+  // Call when the device changes (devicechange event).
   recreateAudioCtx(): void {
     const old = this.audioCtx;
     this.audioCtx = null;
     this.gainNode = null;
-    this.nextNoteTime = 0; // Scheduler will resync on next tick
-    if (old) {
-      old.close().catch(() => {});
-    }
-    this.log("info", "AudioContext discarded (will recreate on next tick)");
+    this.nextNoteTime = 0;
+    if (old) old.close().catch(() => {});
+    this.log("info", "AudioContext discarded for device change (will recreate on next tick)");
   }
 
-  // Call inside a user-gesture callback (focus, click, visibilitychange).
-  // WebKit only allows resume() from a user-gesture context.
+  // Attempt resume from a user-gesture context (focus / visibilitychange).
+  // May silently fail in WebKit — resetAudioContext() is more reliable.
   resumeIfSuspended(): void {
     const ctx = this.audioCtx;
     if (!ctx || ctx.state === "running") return;

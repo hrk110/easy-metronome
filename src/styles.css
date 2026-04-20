@@ -280,6 +280,31 @@ h1 {
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.7);
 }
 
+/* Audio reset button */
+.audio-reset-btn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #6b7280;
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 14px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.audio-reset-btn:hover {
+  color: #2563eb;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.audio-reset-btn:active {
+  transform: scale(0.96);
+}
+
 /* Debug log */
 .debug-section {
   width: 100%;
@@ -370,6 +395,17 @@ details[open].debug-section summary::before {
 
   .alwaysontop-label {
     color: #9ca3af;
+  }
+
+  .audio-reset-btn {
+    color: #9ca3af;
+    border-color: #4b5563;
+  }
+
+  .audio-reset-btn:hover {
+    color: #93c5fd;
+    border-color: #3b82f6;
+    background: #1e3a5f;
   }
 
   .debug-section summary {

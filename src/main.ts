@@ -178,6 +178,13 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Audio reset button — recreates AudioContext inside a click handler so that
+  // WebKit treats new AudioContext() + resume() as a user-gesture call.
+  const audioResetBtn = document.getElementById("audio-reset-btn") as HTMLButtonElement;
+  audioResetBtn.addEventListener("click", () => {
+    metronome.resetAudioContext();
+  });
+
   // Resize window to fit content when debug log is toggled open/closed
   const debugSection = document.querySelector<HTMLDetailsElement>(".debug-section");
   const container = document.querySelector<HTMLElement>(".container");
