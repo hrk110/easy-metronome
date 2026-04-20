@@ -46,21 +46,47 @@ export class Metronome {
   }
 
   // Must be called from a user-gesture handler (click).
-  // Creates a brand-new AudioContext and immediately calls resume() while still
-  // inside the gesture stack — the only reliable way in WebKit.
+  //
+  // Bug that existed before: setting this.audioCtx = null while the scheduler's
+  // setTimeout chain is still live causes getAudioCtx() inside the next
+  // scheduler tick to create a *second* AudioContext, making the one we just
+  // resumed unreachable.  Fix: stop the scheduler first, recreate context,
+  // then restart scheduler only after resume() resolves.
   resetAudioContext(): void {
+    const wasRunning = this.timerID !== null;
+
+    // 1. Stop the scheduler so no race on this.audioCtx.
+    if (this.timerID !== null) {
+      clearTimeout(this.timerID);
+      this.timerID = null;
+    }
+
+    // 2. Discard old context (close asynchronously after new one is ready).
     const old = this.audioCtx;
     this.audioCtx = null;
     this.gainNode = null;
-    this.nextNoteTime = 0;
-    if (old) old.close().catch(() => {});
 
-    // Both new AudioContext() and resume() must happen inside the click handler.
+    // 3. Create new context + resume() — both called synchronously inside the
+    //    click handler so WebKit accepts them as a user-gesture operation.
     const ctx = this.getAudioCtx();
+    this.log("info", `Resetting AudioContext (state before resume: ${ctx.state})`);
+
     ctx
       .resume()
-      .then(() => this.log("info", `AudioContext reset → ${ctx.state}`))
+      .then(() => {
+        this.log("info", `AudioContext reset complete (state: ${ctx.state})`);
+        // 4. Restart scheduler now that context is running.
+        if (wasRunning) {
+          this.currentBeat = 0;
+          this.nextNoteTime = ctx.currentTime + 0.05;
+          this.scheduler();
+        }
+      })
       .catch((e) => this.log("error", `reset resume() failed: ${e}`));
+
+    // 5. Close the old context after a short delay so the new one can
+    //    initialise without competing for the audio device.
+    if (old) setTimeout(() => old.close().catch(() => {}), 500);
   }
 
   // Call when the device changes (devicechange event).
