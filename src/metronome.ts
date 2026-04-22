@@ -1,182 +1,56 @@
-// Look-ahead scheduler based on Chris Wilson's Web Audio API metronome pattern.
-// https://www.html5rocks.com/en/tutorials/audio/scheduling/
+// Look-ahead scheduler (Chris Wilson pattern), audio output via Rust/cpal.
+// Using performance.now() for timing avoids any dependency on WebKit's
+// AudioContext, which gets suspended by macOS after screen lock.
 
-const SCHEDULE_AHEAD_TIME = 0.1; // seconds to schedule ahead
-const LOOKAHEAD_MS = 25;         // scheduler interval in ms
-const STUCK_LOG_INTERVAL_MS = 5000; // minimum ms between "waiting" log spam
+import { invoke } from "@tauri-apps/api/core";
 
-export type LogLevel = "info" | "warn" | "error";
+const SCHEDULE_AHEAD_MS = 100; // schedule this far ahead
+const LOOKAHEAD_MS = 25;       // scheduler poll interval
 
 export class Metronome {
-  private audioCtx: AudioContext | null = null;
-  private gainNode: GainNode | null = null;
-
   private bpm: number = 120;
   private beatsPerMeasure: number = 4;
   private accentEnabled: boolean = true;
   private beatDurationMultiplier: number = 1.0;
   private secondaryAccentBeat: number = -1;
   private currentBeat: number = 0;
-  private nextNoteTime: number = 0;
+  private nextNoteTime: number = 0; // performance.now() ms
   private timerID: ReturnType<typeof setTimeout> | null = null;
-  private lastStuckLogTime: number = 0;
 
-  private _volume: number = 0.8;
   onBeat?: (beat: number) => void;
-  onLog?: (level: LogLevel, message: string) => void;
 
-  private log(level: LogLevel, message: string): void {
-    this.onLog?.(level, message);
-  }
-
-  private createContext(): AudioContext {
-    const ctx = new AudioContext();
-    this.gainNode = ctx.createGain();
-    this.gainNode.gain.value = this._volume;
-    this.gainNode.connect(ctx.destination);
-    this.log("info", `AudioContext created (sampleRate: ${ctx.sampleRate} Hz)`);
-    return ctx;
-  }
-
-  private getAudioCtx(): AudioContext {
-    if (!this.audioCtx || this.audioCtx.state === "closed") {
-      this.audioCtx = this.createContext();
-    }
-    return this.audioCtx;
-  }
-
-  // Must be called from a user-gesture handler (click).
-  //
-  // Bug that existed before: setting this.audioCtx = null while the scheduler's
-  // setTimeout chain is still live causes getAudioCtx() inside the next
-  // scheduler tick to create a *second* AudioContext, making the one we just
-  // resumed unreachable.  Fix: stop the scheduler first, recreate context,
-  // then restart scheduler only after resume() resolves.
-  resetAudioContext(): void {
-    const wasRunning = this.timerID !== null;
-
-    // 1. Stop the scheduler so no race on this.audioCtx.
-    if (this.timerID !== null) {
-      clearTimeout(this.timerID);
-      this.timerID = null;
-    }
-
-    // 2. Discard old context (close asynchronously after new one is ready).
-    const old = this.audioCtx;
-    this.audioCtx = null;
-    this.gainNode = null;
-
-    // 3. Create new context + resume() — both called synchronously inside the
-    //    click handler so WebKit accepts them as a user-gesture operation.
-    const ctx = this.getAudioCtx();
-    this.log("info", `Resetting AudioContext (state before resume: ${ctx.state})`);
-
-    ctx
-      .resume()
-      .then(() => {
-        this.log("info", `AudioContext reset complete (state: ${ctx.state})`);
-        // 4. Restart scheduler now that context is running.
-        if (wasRunning) {
-          this.currentBeat = 0;
-          this.nextNoteTime = ctx.currentTime + 0.05;
-          this.scheduler();
-        }
-      })
-      .catch((e) => this.log("error", `reset resume() failed: ${e}`));
-
-    // 5. Close the old context after a short delay so the new one can
-    //    initialise without competing for the audio device.
-    if (old) setTimeout(() => old.close().catch(() => {}), 500);
-  }
-
-  // Call when the device changes (devicechange event).
-  recreateAudioCtx(): void {
-    const old = this.audioCtx;
-    this.audioCtx = null;
-    this.gainNode = null;
-    this.nextNoteTime = 0;
-    if (old) old.close().catch(() => {});
-    this.log("info", "AudioContext discarded for device change (will recreate on next tick)");
-  }
-
-  // Attempt resume from a user-gesture context (focus / visibilitychange).
-  // May silently fail in WebKit — resetAudioContext() is more reliable.
-  resumeIfSuspended(): void {
-    const ctx = this.audioCtx;
-    if (!ctx || ctx.state === "running") return;
-    this.log("info", `Attempting resume (state: ${ctx.state})`);
-    ctx
-      .resume()
-      .then(() => this.log("info", `AudioContext resumed → ${this.audioCtx?.state ?? "gone"}`))
-      .catch((e) => this.log("error", `resume() failed: ${e}`));
-  }
-
-  private scheduleNote(beat: number, time: number): void {
-    const ctx = this.getAudioCtx();
-    const gain = this.gainNode!;
-
-    const osc = ctx.createOscillator();
-    const envelope = ctx.createGain();
-
-    osc.connect(envelope);
-    envelope.connect(gain);
-
+  private scheduleNote(beat: number, delayMs: number): void {
+    let frequencyHz: number;
     if (beat === 0 && this.accentEnabled) {
-      osc.frequency.value = 1000;
+      frequencyHz = 1000;
     } else if (beat === this.secondaryAccentBeat && this.accentEnabled) {
-      osc.frequency.value = 700;
+      frequencyHz = 700;
     } else {
-      osc.frequency.value = 440;
+      frequencyHz = 440;
     }
-
-    envelope.gain.setValueAtTime(1.0, time);
-    envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-
-    osc.start(time);
-    osc.stop(time + 0.06);
+    // Fire-and-forget: Rust schedules the click into the cpal stream buffer.
+    invoke("schedule_click", { frequencyHz, delayMs }).catch(() => {});
   }
 
   private scheduler(): void {
-    const ctx = this.getAudioCtx();
+    const now = performance.now();
 
-    // Context closed externally (aggressive memory management, device removed, etc.)
-    if (ctx.state === "closed") {
-      this.log("warn", "AudioContext was closed — will recreate");
-      this.audioCtx = null;
-      this.gainNode = null;
-      this.nextNoteTime = 0;
-      this.timerID = setTimeout(() => this.scheduler(), LOOKAHEAD_MS);
-      return;
+    // After screen lock, performance.now() advances but nextNoteTime does not
+    // (JS timers may be throttled). Resync to avoid a burst of queued notes.
+    if (this.nextNoteTime < now) {
+      this.nextNoteTime = now + 50;
     }
 
-    // Suspended or interrupted — cannot schedule; wait for resumeIfSuspended()
-    if (ctx.state !== "running") {
-      const now = Date.now();
-      if (now - this.lastStuckLogTime > STUCK_LOG_INTERVAL_MS) {
-        this.lastStuckLogTime = now;
-        this.log("warn", `AudioContext not running (state: ${ctx.state}) — waiting for user gesture to resume`);
-      }
-      this.timerID = setTimeout(() => this.scheduler(), LOOKAHEAD_MS);
-      return;
-    }
+    while (this.nextNoteTime < now + SCHEDULE_AHEAD_MS) {
+      const delayMs = this.nextNoteTime - now; // always >= 0 after resync
 
-    // Resync after a suspension: ctx.currentTime may have advanced while frozen,
-    // or may be behind nextNoteTime — clamp to avoid a burst of queued notes.
-    if (this.nextNoteTime < ctx.currentTime) {
-      this.log("info", `Resynced nextNoteTime (+${(ctx.currentTime - this.nextNoteTime).toFixed(3)} s drift)`);
-      this.nextNoteTime = ctx.currentTime + 0.05;
-    }
-
-    while (this.nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD_TIME) {
-      this.scheduleNote(this.currentBeat, this.nextNoteTime);
+      this.scheduleNote(this.currentBeat, delayMs);
 
       const beat = this.currentBeat;
-      const noteTime = this.nextNoteTime;
-      const delay = Math.max(0, (noteTime - ctx.currentTime) * 1000);
-      setTimeout(() => this.onBeat?.(beat), delay);
+      setTimeout(() => this.onBeat?.(beat), delayMs);
 
-      const secondsPerBeat = (60.0 / this.bpm) * this.beatDurationMultiplier;
-      this.nextNoteTime += secondsPerBeat;
+      const msPerBeat = (60_000 / this.bpm) * this.beatDurationMultiplier;
+      this.nextNoteTime += msPerBeat;
       this.currentBeat = (this.currentBeat + 1) % this.beatsPerMeasure;
     }
 
@@ -185,15 +59,8 @@ export class Metronome {
 
   start(): void {
     if (this.timerID !== null) return;
-
-    const ctx = this.getAudioCtx();
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
-
     this.currentBeat = 0;
-    this.nextNoteTime = ctx.currentTime + 0.05;
-    this.log("info", `Started at ${this.bpm} BPM`);
+    this.nextNoteTime = performance.now() + 50;
     this.scheduler();
   }
 
@@ -201,7 +68,6 @@ export class Metronome {
     if (this.timerID !== null) {
       clearTimeout(this.timerID);
       this.timerID = null;
-      this.log("info", "Stopped");
     }
   }
 
@@ -235,10 +101,7 @@ export class Metronome {
   }
 
   setVolume(volume: number): void {
-    this._volume = Math.max(0, Math.min(1, volume));
-    if (this.gainNode) {
-      this.gainNode.gain.value = this._volume;
-    }
+    invoke("set_click_volume", { volume: Math.max(0, Math.min(1, volume)) }).catch(() => {});
   }
 
   isRunning(): boolean {

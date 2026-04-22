@@ -1,4 +1,4 @@
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Metronome } from "./metronome";
 
 const metronome = new Metronome();
@@ -38,7 +38,6 @@ function updateTimesigCols(): void {
   const width = container.clientWidth;
   const gap = 6;
   const minBtnW = 44;
-  // Find the largest divisor of total that fits within the available width
   const divisors: number[] = [];
   for (let d = total; d >= 1; d--) {
     if (total % d === 0) divisors.push(d);
@@ -46,38 +45,6 @@ function updateTimesigCols(): void {
   const cols = divisors.find((n) => width >= n * minBtnW + (n - 1) * gap) ?? 1;
   container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 }
-
-// ---------------------------------------------------------------------------
-// Log panel
-// ---------------------------------------------------------------------------
-const MAX_LOG_ENTRIES = 40;
-
-function addLogEntry(level: import("./metronome").LogLevel, message: string): void {
-  const list = document.getElementById("debug-log-list");
-  const summary = document.getElementById("debug-summary");
-  if (!list || !summary) return;
-
-  const now = new Date();
-  const ts = now.toTimeString().slice(0, 8);
-  const li = document.createElement("li");
-  li.className = `log-${level}`;
-  li.textContent = `[${ts}] ${message}`;
-  list.appendChild(li);
-
-  // Evict oldest entries
-  while (list.children.length > MAX_LOG_ENTRIES) {
-    list.removeChild(list.firstChild!);
-  }
-
-  // Auto-scroll
-  list.scrollTop = list.scrollHeight;
-
-  // Update summary badge with warn/error count
-  const badCount = list.querySelectorAll(".log-warn, .log-error").length;
-  summary.textContent = badCount > 0 ? `ログ (⚠ ${badCount})` : "ログ";
-}
-
-// ---------------------------------------------------------------------------
 
 window.addEventListener("DOMContentLoaded", () => {
   updateBeatIndicators();
@@ -89,7 +56,7 @@ window.addEventListener("DOMContentLoaded", () => {
     new ResizeObserver(updateTimesigCols).observe(timesigButtons);
   }
 
-  // BPM hover buttons — change once on mouseenter, repeat on interval while hovered
+  // BPM hover buttons
   document.querySelectorAll<HTMLButtonElement>(".bpm-btn").forEach((btn) => {
     const delta = parseInt(btn.dataset.delta ?? "0", 10);
     let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -158,55 +125,13 @@ window.addEventListener("DOMContentLoaded", () => {
 
   startStopBtn.addEventListener("click", toggleStartStop);
 
-  // Log callback
-  metronome.onLog = addLogEntry;
-
-  // Resume AudioContext on focus restore (screen unlock, app switch).
-  // WebKit only allows ctx.resume() from a user-gesture context;
-  // window focus qualifies.
-  const handleResume = () => metronome.resumeIfSuspended();
-  window.addEventListener("focus", handleResume);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) handleResume();
-  });
-
-  // Recreate AudioContext when the system audio device changes.
-  // The existing context becomes silently invalid after a device switch.
-  navigator.mediaDevices.addEventListener("devicechange", () => {
-    if (metronome.isRunning()) {
-      metronome.recreateAudioCtx();
-    }
-  });
-
-  // Audio reset button — recreates AudioContext inside a click handler so that
-  // WebKit treats new AudioContext() + resume() as a user-gesture call.
-  const audioResetBtn = document.getElementById("audio-reset-btn") as HTMLButtonElement;
-  audioResetBtn.addEventListener("click", () => {
-    metronome.resetAudioContext();
-  });
-
-  // Resize window to fit content when debug log is toggled open/closed
-  const debugSection = document.querySelector<HTMLDetailsElement>(".debug-section");
-  const container = document.querySelector<HTMLElement>(".container");
-  if (debugSection && container) {
-    debugSection.addEventListener("toggle", async () => {
-      // Wait one frame for the layout to settle after <details> open/close
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const bodyStyle = getComputedStyle(document.body);
-      const bodyPaddingV =
-        parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
-      const newHeight = Math.ceil(container.offsetHeight + bodyPaddingV) + 16;
-      await getCurrentWindow().setSize(new LogicalSize(380, newHeight));
-    });
-  }
-
   // Always on top toggle
   const alwaysOnTopCheckbox = document.getElementById("always-on-top") as HTMLInputElement;
   alwaysOnTopCheckbox.addEventListener("change", () => {
     getCurrentWindow().setAlwaysOnTop(alwaysOnTopCheckbox.checked);
   });
 
-  // Keyboard shortcuts: Space = start/stop, hjkl = BPM (h:-5, j:-1, k:+1, l:+5)
+  // Keyboard shortcuts
   document.addEventListener("keydown", (e) => {
     if (e.target instanceof HTMLInputElement) return;
     switch (e.key) {
