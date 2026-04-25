@@ -22,39 +22,33 @@ A simple metronome desktop application built with Tauri and Vanilla TypeScript.
 
 ### BPM 増減ボタン / BPM Step Buttons
 
-- `−5` / `−1` / `+1` / `+5` ボタンをホバーするとテンポが変化
-- ホバーし続けると「間隔」スライダーで設定した間隔ごとに繰り返し変化（デフォルト 500ms）
+- `−5` / `−1` / `+1` / `+5` ボタンをホバーすると即座にテンポが変化し、500ms ごとに繰り返し変化
 - 範囲: 40〜240 BPM
 
-- Hover over `−5` / `−1` / `+1` / `+5` buttons to change the tempo
-- Holding the hover repeats the change at the interval set by the slider (default 500 ms)
+- Hover over `−5` / `−1` / `+1` / `+5` to change the tempo immediately, then repeat every 500 ms while held
 - Range: 40–240 BPM
 
 ### キーボードショートカット / Keyboard Shortcuts
 
-| キー    | 操作                |
-| ------- | ------------------- |
-| `Space` | スタート / ストップ |
-| `h`     | BPM −5              |
-| `j`     | BPM −1              |
-| `k`     | BPM +1              |
-| `l`     | BPM +5              |
+| キー    | 操作                  |
+| ------- | --------------------- |
+| `Space` | スタート / ストップ   |
+| `h`     | BPM −5                |
+| `j`     | BPM −1                |
+| `k`     | BPM +1                |
+| `l`     | BPM +5                |
+| `x`     | BPM を 2 倍           |
+| `/`     | BPM を ½ に           |
 
-スライダーにフォーカスがある場合はキー操作を無視します。
+入力フィールドにフォーカスがある場合はキー操作を無視します。
 
-Keys are ignored when a slider is focused.
+Keys are ignored when an input field is focused.
 
 ### 音量調節 / Volume Control
 
 - スライダーで 0〜100% の範囲でクリック音量を調節
 
 - Adjust click volume from 0–100% using the slider
-
-### ホバー間隔調節 / Hover Repeat Interval
-
-- BPM ボタンのホバー繰り返し間隔を 100〜1000ms の範囲で調節（100ms 刻み）
-
-- Adjust the BPM button hover repeat interval from 100–1000 ms (in 100 ms steps)
 
 ### スタート / ストップ / Start / Stop
 
@@ -116,11 +110,11 @@ The artifacts are regenerated automatically on the next build or `npm run tauri 
 
 ## 技術スタック / Tech Stack
 
-| Layer         | Technology                           |
-| ------------- | ------------------------------------ |
-| Desktop shell | Tauri v2                             |
-| Frontend      | Vanilla TypeScript + Vite            |
-| Audio         | Web Audio API (look-ahead scheduler) |
-| Styling       | Plain CSS with dark mode support     |
+| Layer         | Technology                                            |
+| ------------- | ----------------------------------------------------- |
+| Desktop shell | Tauri v2                                              |
+| Frontend      | Vanilla TypeScript + Vite                             |
+| Audio         | Rust/cpal — CoreAudio on macOS (look-ahead scheduler) |
+| Styling       | Plain CSS with dark mode support                      |
 
 詳細は [`docs/tech-stack.md`](docs/tech-stack.md) を参照。
