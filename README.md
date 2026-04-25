@@ -98,6 +98,20 @@ npm run tauri dev
 npm run tauri build
 ```
 
+### ディスク使用量の削減 / Reducing Disk Usage
+
+Rust のビルド成果物（`src-tauri/target/`）は数 GB になることがあります。不要になったら以下で削除できます。
+
+Rust build artifacts in `src-tauri/target/` can grow to several GB. Remove them when not needed:
+
+```bash
+cd src-tauri && cargo clean
+```
+
+次回のビルドや `npm run tauri dev` 実行時に自動で再生成されます（初回は数分かかります）。
+
+The artifacts are regenerated automatically on the next build or `npm run tauri dev` run (first build takes a few minutes).
+
 ---
 
 ## 技術スタック / Tech Stack
