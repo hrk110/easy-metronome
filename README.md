@@ -88,6 +88,14 @@ npm run tauri dev
 
 ### ビルド / Build
 
+.app のみ生成する場合（DMG 不要）:
+
+```bash
+npm run tauri build -- --bundles app
+```
+
+DMG も含めてすべてのパッケージを生成する場合:
+
 ```bash
 npm run tauri build
 ```
